@@ -29,27 +29,7 @@ The system simply needs to identify the top-k most relevant tools from the tool 
 query. There are no causal chains linking the tools, nor is there any dynamic feedback—such as a change in page
 or system State following the execution of Tool A that subsequently unlocks Tool B.
 2. Data Analysis & Execution
-Hybrid / Semi-dynamic / depends on task difficulty
-Static Mode (Simple Query): A user asks, “Which product had the highest sales last month?” The LLM selects
-the SQL tool, generates an SQL Statement, and retrieves the result. This is a classic static, single-step process.
-Dynamic Mode (Iterative Analysis / Code Interpreter):
-The LLM selects a Python tool to execute a data processing script.
-The code execution fails (generating a new State, st.
-The LLM captures the error message and dynamically evaluates the next step: should it switch to a plotting tool,
-rewrite the code, or use a data-cleaning API?
-3. Multi-Step Agentic Workflows
-Multi-step/ Sequential Decision Making
-Key idea: s0-(a0) - s1(a1) – s2 (a2) ... sn
-e.g., In scenarios such as web navigation (e.g., WebArena Zhou et al. (2024)), complex cross-service workflows,
-and agentic planning with large models, tasks are explicitly modeled as Partially Observable Markov Decision
-Processes (POMDPs).
-State-dependent: The selection and execution of a tool at in the previous step (e.g., clicking “Search Flights” on
-a booking site) transitions the environment State to st+1 (e.g., arriving at the flight list page). The set of tools
-available—or appropriate—for the next step depends entirely on this new State, st+1.
-Sequential Dependency: The selection of tools involves strict pre-conditions and post-conditions that cannot be
-fully anticipated upfront based solely on the initial query.
-3
-
+deam
 
 --------------------
 
