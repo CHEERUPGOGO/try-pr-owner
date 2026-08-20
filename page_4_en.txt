@@ -58,9 +58,7 @@ Calculation Method:
 Token Consumption: The length of the tool schema description and the average number of tokens in the expected
 return result.
 Time Latency: The average latency of historical calls to the specific API or tool.
-Failure Rate: The probability—calculated from historical logs—that the tool triggers LLM hallucinations or exe-
-cution errors.
-Acts as a negative constraint to prevent the EA from evolving a bloated toolchain—containing a dozen or more
+Failure int to prevent the EA from evolving a bloated toolchain—containing a dozen or more
 redundant tools—that causes severe system timeouts or exceeds token limits.
 Within this three-dimensional framework, the Evolutionary Algorithm (EA) optimizes the vector α
 =
