@@ -1,0 +1,74 @@
+Under review as a conference paper at ICLR 2026
+Algorithm 3 Dynamic Interactive Nested Greedy Algorithm (DIN-GA) in WebArena
+Input: WebArena Environment E; Goal query q; Horizon budget T; Weight vector α = [α1, α2, α3]
+Output: Execution trajectory XT and task success status
+1: Initialize WebArena State s1 ←E.reset(q)
+2: Initialize historical action trajectory X0 ←∅
+3: for step t = 1 ... T do
+4:
+Parse current DOM/Accessibility tree from st to extract valid action candidates V(st)
+5:
+if st is terminal or V(st) = ∅then
+6:
+break
+▷Episode finished or task deadlocked
+7:
+end if
+8:
+// Phase 1: State-Conditioned Marginal Gain Evaluation
+9:
+for each candidate action v ∈V(st) do
+10:
+Compute State-Goal Alignment: Irel(v, q, st)
+11:
+Compute Sequential Dependency Score: Sseq(v, X<t)
+12:
+Compute Execution Risk & Cost: Crisk(v)
+13:
+// Calculate parameterized dynamic marginal gain ˜∆
+14:
+˜∆(v | X<t, st) ←α1 · Irel(v, q, st) + α2 · Sseq(v, X<t) −α3 · Crisk(v)
+15:
+end for
+16:
+// Phase 2: Action Selection
+17:
+v∗
+t ←arg maxv∈V(st) ˜∆(v | X<t, st)
+18:
+// Phase 3: Real Environment Interaction & State Transition
+19:
+Execute action v∗
+t in WebArena: (st+1, rt, done) ←E.step(v∗
+t )
+20:
+Update action trajectory: Xt ←X<t ◦(st, v∗
+t )
+21:
+if done then
+22:
+break
+▷Goal achieved or failure triggered
+23:
+end if
+24: end for
+return Trajectory Xt and final environment task status
+Explanation
+Line 4 (‘GetValidActions‘): In web navigation, the available tools are not static. At each step, the
+algorithm dynamically extracts interactive elements (such as text inputs, clickable buttons, and dropdown menus)
+by parsing the current page (DOM tree) to form the action pool V(st) for that step.
+Lines 9–13 (Calculation of ˜∆): Irel: Evaluates whether action v aligns with the global booking goal q given the
+current page state st (e.g., on a flight list page, selecting “sort by price” or “choose early flight” yields a higher
+alignment score).
+Sseq: Evaluates the coherence of action v with the historical trajectory X<t of the preceding t −1 steps (e.g.,
+entering an ID number immediately after entering a passenger’s name).
+Crisk: Applies a penalty to irreversible or high-cost actions—such as ”submit payment” or ”cancel order”—to
+discourage blind exploration.
+Line 18 (‘Environment Execution‘): Executes the selected action v∗
+t within the WebArena simulator and obtains
+the new state st+1 following the resulting webpage refresh, thereby establishing a dynamic closed-loop process.
+7
+
+
+--------------------
+

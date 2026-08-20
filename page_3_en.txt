@@ -1,0 +1,55 @@
+Under review as a conference paper at ICLR 2026
+Path B: Multi-Objective Evolutionary Optimization (MOEA)
+If you prefer not to force a weighted sum of
+objectives across different dimensions (such as accuracy and latency), you can treat α1 and α2 as two independent
+optimization objectives (e.g., f1 = accuracy, f2 = tool set redundancy).
+By using multi-objective evolutionary algorithms like NSGA-II, you can directly derive a set of Pareto optimal
+tool combinations. Advantages: During deployment, you can dynamically select different tool combinations along
+the Pareto frontier based on current system load (e.g., choosing a combination with extremely high accuracy—but
+involving more tools and longer execution times—during off-peak periods, and switching to a low-latency combi-
+nation during peak periods).
+Why is this approach highly feasible?
+Avoids the issue of missing gradients: LLM tool selection is inherently
+a discrete combinatorial optimization problem (a variant of the 0/1 knapsack problem); gradient-based deep rein-
+forcement learning methods (such as PPO) often struggle here with sparse rewards and an exploding action space.
+Evolutionary algorithms (EA), by contrast, are purely gradient-free global optimizers.
+Breaks out of local optima: Traditional greedy algorithms are prone to making errors at the initial step. By using
+EA to continuously perturb α—or even directly crossover and recombine tool sets S—the algorithm gains the
+“escape capability” needed to break free from local optima.
+1.4
+SCENARIOS
+In LLMs and agents, tool selection/function calling serves as the core mechanism enabling models to transcend
+the limitations of pure text generation and engage in substantive interaction with external systems.
+There are key scenarios:
+1. Information Retrieval & Knowledge Augmentation (RAG)
+Single-step / Static Selection/One-shot deci-
+sion
+Key idea: Query -(Tool selection) Tool -(excute) Response
+The system simply needs to identify the top-k most relevant tools from the tool library based on the user’s current
+query. There are no causal chains linking the tools, nor is there any dynamic feedback—such as a change in page
+or system State following the execution of Tool A that subsequently unlocks Tool B.
+2. Data Analysis & Execution
+Hybrid / Semi-dynamic / depends on task difficulty
+Static Mode (Simple Query): A user asks, “Which product had the highest sales last month?” The LLM selects
+the SQL tool, generates an SQL Statement, and retrieves the result. This is a classic static, single-step process.
+Dynamic Mode (Iterative Analysis / Code Interpreter):
+The LLM selects a Python tool to execute a data processing script.
+The code execution fails (generating a new State, st.
+The LLM captures the error message and dynamically evaluates the next step: should it switch to a plotting tool,
+rewrite the code, or use a data-cleaning API?
+3. Multi-Step Agentic Workflows
+Multi-step/ Sequential Decision Making
+Key idea: s0-(a0) - s1(a1) – s2 (a2) ... sn
+e.g., In scenarios such as web navigation (e.g., WebArena Zhou et al. (2024)), complex cross-service workflows,
+and agentic planning with large models, tasks are explicitly modeled as Partially Observable Markov Decision
+Processes (POMDPs).
+State-dependent: The selection and execution of a tool at in the previous step (e.g., clicking “Search Flights” on
+a booking site) transitions the environment State to st+1 (e.g., arriving at the flight list page). The set of tools
+available—or appropriate—for the next step depends entirely on this new State, st+1.
+Sequential Dependency: The selection of tools involves strict pre-conditions and post-conditions that cannot be
+fully anticipated upfront based solely on the initial query.
+3
+
+
+--------------------
+

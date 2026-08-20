@@ -1,0 +1,60 @@
+Under review as a conference paper at ICLR 2026
+NESTED GREEDY SEARCH FOR TOOL SELECTION
+Anonymous authors
+Paper under double-blind review
+ABSTRACT
+1
+PRELIMINARY
+1.1
+FORMULATION
+Tool selection for LLMs is essentially a complex combinatorial optimization problem. When the candidate tool
+library is vast, exhaustively evaluating all tool combinations is impractical (NP-hard). While standard greedy
+algorithms are efficient, they often fail to account for the complex interactions between tools.
+1.2
+LIMITATION OF NGA
+Algorithm 1 Nested Greedy Algorithm (NGA)
+Input: Ground set V ; budget b; solution-set size k
+Output: Solution set S
+1: S ←∅
+2: for j = 1 ... k do
+3:
+Xj ←∅
+4:
+for t = 1 ... b do
+5:
+v∗←arg maxv∈V \Xj ∆pS(v | Xj)
+6:
+Xj ←Xj ∪{v∗}
+7:
+end for
+8:
+S ←S ∪Xj
+9: end forreturn S
+In LLM tool selection and complex reasoning tasks, the traditional Nested Greedy Algorithm (NGA)—while
+theoretically overcoming the constraints of strict submodularity—exhibits significant drawbacks in practical engi-
+neering deployment. The Evolutionary Nested Greedy Algorithm (ENGA) was introduced specifically to address
+these pain points.
+Limitations of NGA
+Explosive Computational Overhead (Computational Intractability): NGA’s inner loop re-
+quires frequent calculation of the marginal gain ∆. Applying NGA directly to LLM tool selection implies that
+evaluating each candidate tool necessitates a full rollout or forward inference pass using the large model. For a
+vast tool library V, the resulting O(|V|2) cost in terms of LLM API calls is unacceptable regarding both time and
+financial expense.
+Myopic Heuristic Bias: NGA relies on a predefined, static objective function h(S). In complex agentic scenarios,
+the ”quality” of a tool is multidimensional (encompassing relevance, mutual exclusivity, latency, and token costs).
+It is difficult for human experts to arbitrarily determine a perfect, static weighting ratio. If the initial objective
+function is poorly defined, NGA will steadfastly converge to a suboptimal solution.
+Vulnerability to Local Optima: Although NGA possesses greater ”lookahead” capability than standard greedy
+algorithms, it fundamentally follows a deterministic greedy path. Once an erroneous choice is made early in the
+outer loop (e.g., selecting a ”poison” tool that appears relevant but fails to synergize with others later), NGA lacks
+a backtracking mechanism and cannot escape the trap of local optima.
+ENGA (Advantages of ENGA)
+Drastic Reduction in Computational Complexity (Decoupling Inference from
+Search): ENGA completely decouples expensive large-model inference (fitness evaluation) from the inner-loop
+construction of the candidate set. The inner loop utilizes a lightweight proxy function ˜∆—controlled by hy-
+perparameters α—to perform ultra-fast computations (involving only vector dot products and scalar operations).
+1
+
+
+--------------------
+

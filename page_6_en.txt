@@ -1,0 +1,50 @@
+Under review as a conference paper at ICLR 2026
+1. α1: State-Goal Alignment
+In a web environment, the relevance of a tool depends not only on the global goal q (e.g., ”book an early flight to
+New York tomorrow”) but also—and more critically—on the current page state st (e.g., currently on the ”passen-
+ger information” page).
+Physical Significance: The local utility of a candidate action v in advancing the global task q, given the current
+DOM state.
+Calculation Method: Extract the text and attributes of the UI element associated with candidate action v (e.g.,
+‘<button aria-label=”Search Flights”>‘).
+Use a lightweight encoder to compute the element’s embedding and calculate its similarity to the current sub-task
+intent (derived from the goal q and the current state st).
+Scenario Mapping: If the current state st is the homepage and the goal is to book a flight, the action v =
+type[Input Destination, ”JFK”] would receive a very high score, whereas v = click[FAQ Link] would receive a
+very low score.
+2. α2: Sequential Dependency & Coherence
+Actions in WebArena are governed by strict causal relationships—specifically, ”pre-conditions” and ”post-
+conditions.” For instance, one cannot click ”Search” before selecting a date, nor click ”Pay” without first agreeing
+to the terms and conditions.
+Physical Significance: The logical coherence between the candidate tool v and the sequence of actions already
+performed (Xj); specifically, whether the state resulting from Xj satisfies the pre-conditions required for v.
+Calculation Method: Schema-based Pre/Post-condition Matching: For example, the pre-condition for the action
+click[Search] typically requires that specific input fields have already been populated with values. By defining or
+learning a transition matrix, one can calculate the conditional transition probability P(v|Xj) of an action v given
+a historical trajectory Xj.
+DOM Focus Tracking: Assess whether the UI element acted upon by v maintains reasonable continuity—either
+in physical space or logical hierarchy—with the element just interacted with in Xj (e.g., filling in the ”First Name”
+field immediately after the ”Last Name” field).
+Scenario Mapping: If Xj includes click[Departure Date Input], then the subsequent candidate action v =
+click[Calendar Day 24] receives a significant synergy bonus.
+3. α3: Execution Risk & Irreversibility
+In web navigation, the costs associated with executing incorrect actions are asymmetric. The cost of scrolling
+down a page is minimal (as it can be reversed by scrolling up), whereas clicking ”Submit Order” or exiting the
+current booking flow carries a very high cost and could lead to the failure of the entire episode. Furthermore, web
+pages are often extremely lengthy, and processing complex DOM trees consumes a large number of tokens.
+Physical Significance: The execution cost of an action (token consumption) and the potential risk of causing a
+state collapse.
+Calculation Method: Token / Time Cost: Estimate the DOM complexity of the next state that the system must
+parse after executing action v.
+Irreversibility Penalty: Assign a penalty coefficient to high-risk actions. For instance, form submission, pay-
+ment, and cross-domain navigation are classified as high-risk actions, whereas hovering and scrolling are low-risk.
+For high-risk actions, the algorithm adopts a more conservative approach when evaluating their ∆value (i.e., they
+require strong positive support from α1 and α2 to be selected).
+Scenario Mapping: For v = click[Confirm Payment], the value of Crisk would be high. Unless Xj already
+perfectly encapsulates all necessary steps—such as seat selection and form filling—(resulting in an extremely
+high Sseq), the algorithm will not greedily select it during the early stages of exploration.
+6
+
+
+--------------------
+

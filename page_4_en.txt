@@ -1,0 +1,72 @@
+Under review as a conference paper at ICLR 2026
+Table 1: Summarization of 3 Scenarios
+Dimension
+Static Tool Selection
+Dynamic / Sequential Tool Selection
+Primary Mapping Scenarios
+Scenarios 1 & simple Scenario 2
+Scenario 3 and complex Scenario 2 Web navigation, etc.)
+Core Decision Formula
+v∗= arg maxv Relevance(v, q)
+v∗
+t = arg max v ˜∆(v | X<t, st)
+Tool Interaction
+Independent or parallel selection (no causality)
+Strong dependency, sequential nature, collaboration or conflict
+Environmental Feedback
+No feedback or single result return only
+Real-time environmental state changes (DOM tree updates, API state changes)
+Optimization Focus
+Semantic relevance, recall
+State alignment, temporal coherence, execution risk management
+1.5
+SUMMARIZATION
+2
+METHOD
+2.1
+NGA
+2.2
+STATIC ENGA
+Objective
+˜∆(v|Xj) = α1 · Irel(v, q) + α2 · Ssyn(v, Xj) −α3 · Crun(v)
+(1)
+1. α1: Semantic Relevance – Focusing on Tool Representation
+This parameter measures the degree of direct matching between a candidate tool v and the current user query q or
+the current RAG/QA context.
+Physical Meaning: Initial alignment of task intent (Intent Alignment).
+Calculation Method: Dense vector retrieval techniques can be employed. By embedding the tool’s description
+(Tool Description/Schema) and the current user query, Irel is defined as the cosine similarity between the two in
+high-dimensional space.
+2. α2: Synergy & Information Gain – Focusing on Structured Representation
+In the workflow of a RAG/QA agent, tools often exhibit strong complementarity. If a ”content-based retrieval tool”
+has already been selected, choosing another highly similar tool should result in significantly diminished marginal
+utility.
+Physical Meaning: Non-redundancy or mutual information of the tool combination.
+Calculation Method:
+Orthogonality Penalty: Calculate the similarity between the candidate tool v’s embedding and the embeddings of
+all tools in the currently selected set Xj; use the maximum value as a penalty term (or conversely, define it as a
+diversity gain).
+Schema-based Mutual Information: Evaluate whether the output data structure of tool v can serve as input for a
+tool within Xj. Particularly when chaining tools via the Model Context Protocol (MCP), if the output of tool A
+aligns precisely with the input parameter specifications of tool B, this topological connectivity can yield a very
+high Ssyn score.
+3. α3: Runtime Penalty – Focusing on Feedback Metrics
+In production deployments, the Large Language Model’s (LLM) context window and response latency act as hard
+constraints.
+Physical Meaning: The ”friction cost” associated with system execution.
+Calculation Method:
+Token Consumption: The length of the tool schema description and the average number of tokens in the expected
+return result.
+Time Latency: The average latency of historical calls to the specific API or tool.
+Failure Rate: The probability—calculated from historical logs—that the tool triggers LLM hallucinations or exe-
+cution errors.
+Acts as a negative constraint to prevent the EA from evolving a bloated toolchain—containing a dozen or more
+redundant tools—that causes severe system timeouts or exceeds token limits.
+Within this three-dimensional framework, the Evolutionary Algorithm (EA) optimizes the vector α
+=
+[α1, α2, α3].
+4
+
+
+--------------------
+

@@ -1,0 +1,60 @@
+Under review as a conference paper at ICLR 2026
+The frequency of large model invocations has been reduced from the ”tool-level probing” seen in NGA to the
+”population-level evaluation” of ENGA, significantly lowering system latency.
+Adaptive Multi-Objective Tuning: ENGA delegates the challenge of balancing gains across different dimensions
+to an evolutionary algorithm. By abstracting semantic relevance (I), tool synergy (S), and system execution cost
+(C) into a weight vector (α), the system dynamically evolves the optimal weight distribution for specific tasks,
+eliminating the need for manual hyperparameter tuning.
+Global Exploration via Population Dynamics: Evolutionary algorithms (such as CMA-ES or genetic algorithms)
+inherently possess global optimization capabilities. By maintaining a diverse population of parameters and in-
+troducing stochastic perturbations through crossover and mutation, ENGA explores a broader solution space,
+effectively avoiding the premature convergence issues that plague deterministic greedy algorithms in complex,
+non-convex spaces.
+Fit for Black-box LLMs: LLM output generation, hallucination probability, and actual task success rates are
+typically non-differentiable. ENGA bypasses gradient-based optimization; it requires only a final scalar reward
+(fitness) from the large model to drive the iterative refinement of tool combination logic, making it ideally suited
+to the engineering paradigms of current agentic systems.
+1.3
+EVOLUTIONARY NGA
+By applying multi-objective parameterization (introducing α1, α2) to the computationally expensive marginal
+gain ∆within the NGA inner loop—and solving it using Evolutionary Algorithms (EA)—a hybrid optimization
+architecture is effectively constructed.
+In the complex environment of LLM tool use, this design elegantly bypasses the non-differentiable black-box
+nature of large language models.
+novel ENGA
+:
+1. Parameterized deconstruction of the marginal gain ∆
+The original NGA required an actual evaluation of ∆pS(v|Xj) within the inner loop; in an agent scenario, this
+implies an extremely time-consuming full inference process. By introducing weight parameters α, the “true
+marginal gain” can be approximated via dimensionality reduction into a low-cost proxy heuristic function:
+˜∆(v|Xj) = α1 · ϕutility(v) + α2 · ϕsynergy(v, Xj) −α3 · ϕcost(v)
+ϕutility(v): The intrinsic utility of tool v (e.g., a prior score based on historical invocation success rates).
+ϕsynergy(v, Xj): The synergy or diversity between tool v and the currently selected tool set Xj (e.g., calculated via
+the orthogonality of tool embeddings).
+ϕcost(v): The token consumption or latency associated with invoking the tool.
+Under this framework, the greedy selection step in the NGA inner loop no longer relies on model rollouts but
+instead transforms into a rapid scalar computation.
+2. Two Approaches to Using Evolutionary Algorithms (EA)
+There are two highly suitable paths for using evolutionary algorithms to ”solve” this system:
+Path A: Evolving Hyperparameters (Evolving the Heuristics)
+In this scenario, an ”individual” in the evolu-
+tionary algorithm is a weight vector α = [α1, α2, . . . ].
+1. Initialize Population: Randomly generate multiple sets of α.
+2. Rapid Evaluation (NGA as Decoder): For each set of α in the population, plug it into the inner function ˜∆,
+quickly execute the NGA algorithm, and output a final tool combination SNGA
+α
+.
+3. Calculate Fitness: Feed the tool set SNGA
+α
+to the LLM and execute it on a validation set; the resulting actual task
+success rate (or composite reward) serves as the fitness for that α.
+4. Mutation and Crossover: Discard low-scoring α values and generate new weights through crossover and
+mutation until convergence.
+Advantages: This method leverages the powerful optimization capabilities of algorithms like CMA-ES (Covari-
+ance Matrix Adaptation Evolution Strategy) in continuous spaces while significantly reducing the number of LLM
+calls.
+2
+
+
+--------------------
+

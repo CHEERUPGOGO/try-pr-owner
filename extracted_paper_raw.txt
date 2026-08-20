@@ -1,0 +1,929 @@
+=== PAGE 1 ===
+000
+001
+002
+003
+004
+005
+006
+007
+008
+009
+010
+011
+012
+013
+014
+015
+016
+017
+018
+019
+020
+021
+022
+023
+024
+025
+026
+027
+028
+029
+030
+031
+032
+033
+034
+035
+036
+037
+038
+039
+040
+041
+042
+043
+044
+045
+046
+047
+048
+049
+050
+051
+052
+053
+054
+055
+056
+057
+Under review as a conference paper at ICLR 2026
+NESTED GREEDY SEARCH FOR TOOL SELECTION
+Anonymous authors
+Paper under double-blind review
+ABSTRACT
+1
+PRELIMINARY
+1.1
+FORMULATION
+Tool selection for LLMs is essentially a complex combinatorial optimization problem. When the candidate tool
+library is vast, exhaustively evaluating all tool combinations is impractical (NP-hard). While standard greedy
+algorithms are efficient, they often fail to account for the complex interactions between tools.
+1.2
+LIMITATION OF NGA
+Algorithm 1 Nested Greedy Algorithm (NGA)
+Input: Ground set V ; budget b; solution-set size k
+Output: Solution set S
+1: S ←∅
+2: for j = 1 ... k do
+3:
+Xj ←∅
+4:
+for t = 1 ... b do
+5:
+v∗←arg maxv∈V \Xj ∆pS(v | Xj)
+6:
+Xj ←Xj ∪{v∗}
+7:
+end for
+8:
+S ←S ∪Xj
+9: end forreturn S
+In LLM tool selection and complex reasoning tasks, the traditional Nested Greedy Algorithm (NGA)—while
+theoretically overcoming the constraints of strict submodularity—exhibits significant drawbacks in practical engi-
+neering deployment. The Evolutionary Nested Greedy Algorithm (ENGA) was introduced specifically to address
+these pain points.
+Limitations of NGA
+Explosive Computational Overhead (Computational Intractability): NGA’s inner loop re-
+quires frequent calculation of the marginal gain ∆. Applying NGA directly to LLM tool selection implies that
+evaluating each candidate tool necessitates a full rollout or forward inference pass using the large model. For a
+vast tool library V, the resulting O(|V|2) cost in terms of LLM API calls is unacceptable regarding both time and
+financial expense.
+Myopic Heuristic Bias: NGA relies on a predefined, static objective function h(S). In complex agentic scenarios,
+the ”quality” of a tool is multidimensional (encompassing relevance, mutual exclusivity, latency, and token costs).
+It is difficult for human experts to arbitrarily determine a perfect, static weighting ratio. If the initial objective
+function is poorly defined, NGA will steadfastly converge to a suboptimal solution.
+Vulnerability to Local Optima: Although NGA possesses greater ”lookahead” capability than standard greedy
+algorithms, it fundamentally follows a deterministic greedy path. Once an erroneous choice is made early in the
+outer loop (e.g., selecting a ”poison” tool that appears relevant but fails to synergize with others later), NGA lacks
+a backtracking mechanism and cannot escape the trap of local optima.
+ENGA (Advantages of ENGA)
+Drastic Reduction in Computational Complexity (Decoupling Inference from
+Search): ENGA completely decouples expensive large-model inference (fitness evaluation) from the inner-loop
+construction of the candidate set. The inner loop utilizes a lightweight proxy function ˜∆—controlled by hy-
+perparameters α—to perform ultra-fast computations (involving only vector dot products and scalar operations).
+1
+
+
+=== PAGE 2 ===
+058
+059
+060
+061
+062
+063
+064
+065
+066
+067
+068
+069
+070
+071
+072
+073
+074
+075
+076
+077
+078
+079
+080
+081
+082
+083
+084
+085
+086
+087
+088
+089
+090
+091
+092
+093
+094
+095
+096
+097
+098
+099
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+Under review as a conference paper at ICLR 2026
+The frequency of large model invocations has been reduced from the ”tool-level probing” seen in NGA to the
+”population-level evaluation” of ENGA, significantly lowering system latency.
+Adaptive Multi-Objective Tuning: ENGA delegates the challenge of balancing gains across different dimensions
+to an evolutionary algorithm. By abstracting semantic relevance (I), tool synergy (S), and system execution cost
+(C) into a weight vector (α), the system dynamically evolves the optimal weight distribution for specific tasks,
+eliminating the need for manual hyperparameter tuning.
+Global Exploration via Population Dynamics: Evolutionary algorithms (such as CMA-ES or genetic algorithms)
+inherently possess global optimization capabilities. By maintaining a diverse population of parameters and in-
+troducing stochastic perturbations through crossover and mutation, ENGA explores a broader solution space,
+effectively avoiding the premature convergence issues that plague deterministic greedy algorithms in complex,
+non-convex spaces.
+Fit for Black-box LLMs: LLM output generation, hallucination probability, and actual task success rates are
+typically non-differentiable. ENGA bypasses gradient-based optimization; it requires only a final scalar reward
+(fitness) from the large model to drive the iterative refinement of tool combination logic, making it ideally suited
+to the engineering paradigms of current agentic systems.
+1.3
+EVOLUTIONARY NGA
+By applying multi-objective parameterization (introducing α1, α2) to the computationally expensive marginal
+gain ∆within the NGA inner loop—and solving it using Evolutionary Algorithms (EA)—a hybrid optimization
+architecture is effectively constructed.
+In the complex environment of LLM tool use, this design elegantly bypasses the non-differentiable black-box
+nature of large language models.
+novel ENGA
+:
+1. Parameterized deconstruction of the marginal gain ∆
+The original NGA required an actual evaluation of ∆pS(v|Xj) within the inner loop; in an agent scenario, this
+implies an extremely time-consuming full inference process. By introducing weight parameters α, the “true
+marginal gain” can be approximated via dimensionality reduction into a low-cost proxy heuristic function:
+˜∆(v|Xj) = α1 · ϕutility(v) + α2 · ϕsynergy(v, Xj) −α3 · ϕcost(v)
+ϕutility(v): The intrinsic utility of tool v (e.g., a prior score based on historical invocation success rates).
+ϕsynergy(v, Xj): The synergy or diversity between tool v and the currently selected tool set Xj (e.g., calculated via
+the orthogonality of tool embeddings).
+ϕcost(v): The token consumption or latency associated with invoking the tool.
+Under this framework, the greedy selection step in the NGA inner loop no longer relies on model rollouts but
+instead transforms into a rapid scalar computation.
+2. Two Approaches to Using Evolutionary Algorithms (EA)
+There are two highly suitable paths for using evolutionary algorithms to ”solve” this system:
+Path A: Evolving Hyperparameters (Evolving the Heuristics)
+In this scenario, an ”individual” in the evolu-
+tionary algorithm is a weight vector α = [α1, α2, . . . ].
+1. Initialize Population: Randomly generate multiple sets of α.
+2. Rapid Evaluation (NGA as Decoder): For each set of α in the population, plug it into the inner function ˜∆,
+quickly execute the NGA algorithm, and output a final tool combination SNGA
+α
+.
+3. Calculate Fitness: Feed the tool set SNGA
+α
+to the LLM and execute it on a validation set; the resulting actual task
+success rate (or composite reward) serves as the fitness for that α.
+4. Mutation and Crossover: Discard low-scoring α values and generate new weights through crossover and
+mutation until convergence.
+Advantages: This method leverages the powerful optimization capabilities of algorithms like CMA-ES (Covari-
+ance Matrix Adaptation Evolution Strategy) in continuous spaces while significantly reducing the number of LLM
+calls.
+2
+
+
+=== PAGE 3 ===
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+Under review as a conference paper at ICLR 2026
+Path B: Multi-Objective Evolutionary Optimization (MOEA)
+If you prefer not to force a weighted sum of
+objectives across different dimensions (such as accuracy and latency), you can treat α1 and α2 as two independent
+optimization objectives (e.g., f1 = accuracy, f2 = tool set redundancy).
+By using multi-objective evolutionary algorithms like NSGA-II, you can directly derive a set of Pareto optimal
+tool combinations. Advantages: During deployment, you can dynamically select different tool combinations along
+the Pareto frontier based on current system load (e.g., choosing a combination with extremely high accuracy—but
+involving more tools and longer execution times—during off-peak periods, and switching to a low-latency combi-
+nation during peak periods).
+Why is this approach highly feasible?
+Avoids the issue of missing gradients: LLM tool selection is inherently
+a discrete combinatorial optimization problem (a variant of the 0/1 knapsack problem); gradient-based deep rein-
+forcement learning methods (such as PPO) often struggle here with sparse rewards and an exploding action space.
+Evolutionary algorithms (EA), by contrast, are purely gradient-free global optimizers.
+Breaks out of local optima: Traditional greedy algorithms are prone to making errors at the initial step. By using
+EA to continuously perturb α—or even directly crossover and recombine tool sets S—the algorithm gains the
+“escape capability” needed to break free from local optima.
+1.4
+SCENARIOS
+In LLMs and agents, tool selection/function calling serves as the core mechanism enabling models to transcend
+the limitations of pure text generation and engage in substantive interaction with external systems.
+There are key scenarios:
+1. Information Retrieval & Knowledge Augmentation (RAG)
+Single-step / Static Selection/One-shot deci-
+sion
+Key idea: Query -(Tool selection) Tool -(excute) Response
+The system simply needs to identify the top-k most relevant tools from the tool library based on the user’s current
+query. There are no causal chains linking the tools, nor is there any dynamic feedback—such as a change in page
+or system State following the execution of Tool A that subsequently unlocks Tool B.
+2. Data Analysis & Execution
+Hybrid / Semi-dynamic / depends on task difficulty
+Static Mode (Simple Query): A user asks, “Which product had the highest sales last month?” The LLM selects
+the SQL tool, generates an SQL Statement, and retrieves the result. This is a classic static, single-step process.
+Dynamic Mode (Iterative Analysis / Code Interpreter):
+The LLM selects a Python tool to execute a data processing script.
+The code execution fails (generating a new State, st.
+The LLM captures the error message and dynamically evaluates the next step: should it switch to a plotting tool,
+rewrite the code, or use a data-cleaning API?
+3. Multi-Step Agentic Workflows
+Multi-step/ Sequential Decision Making
+Key idea: s0-(a0) - s1(a1) – s2 (a2) ... sn
+e.g., In scenarios such as web navigation (e.g., WebArena Zhou et al. (2024)), complex cross-service workflows,
+and agentic planning with large models, tasks are explicitly modeled as Partially Observable Markov Decision
+Processes (POMDPs).
+State-dependent: The selection and execution of a tool at in the previous step (e.g., clicking “Search Flights” on
+a booking site) transitions the environment State to st+1 (e.g., arriving at the flight list page). The set of tools
+available—or appropriate—for the next step depends entirely on this new State, st+1.
+Sequential Dependency: The selection of tools involves strict pre-conditions and post-conditions that cannot be
+fully anticipated upfront based solely on the initial query.
+3
+
+
+=== PAGE 4 ===
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+Under review as a conference paper at ICLR 2026
+Table 1: Summarization of 3 Scenarios
+Dimension
+Static Tool Selection
+Dynamic / Sequential Tool Selection
+Primary Mapping Scenarios
+Scenarios 1 & simple Scenario 2
+Scenario 3 and complex Scenario 2 Web navigation, etc.)
+Core Decision Formula
+v∗= arg maxv Relevance(v, q)
+v∗
+t = arg max v ˜∆(v | X<t, st)
+Tool Interaction
+Independent or parallel selection (no causality)
+Strong dependency, sequential nature, collaboration or conflict
+Environmental Feedback
+No feedback or single result return only
+Real-time environmental state changes (DOM tree updates, API state changes)
+Optimization Focus
+Semantic relevance, recall
+State alignment, temporal coherence, execution risk management
+1.5
+SUMMARIZATION
+2
+METHOD
+2.1
+NGA
+2.2
+STATIC ENGA
+Objective
+˜∆(v|Xj) = α1 · Irel(v, q) + α2 · Ssyn(v, Xj) −α3 · Crun(v)
+(1)
+1. α1: Semantic Relevance – Focusing on Tool Representation
+This parameter measures the degree of direct matching between a candidate tool v and the current user query q or
+the current RAG/QA context.
+Physical Meaning: Initial alignment of task intent (Intent Alignment).
+Calculation Method: Dense vector retrieval techniques can be employed. By embedding the tool’s description
+(Tool Description/Schema) and the current user query, Irel is defined as the cosine similarity between the two in
+high-dimensional space.
+2. α2: Synergy & Information Gain – Focusing on Structured Representation
+In the workflow of a RAG/QA agent, tools often exhibit strong complementarity. If a ”content-based retrieval tool”
+has already been selected, choosing another highly similar tool should result in significantly diminished marginal
+utility.
+Physical Meaning: Non-redundancy or mutual information of the tool combination.
+Calculation Method:
+Orthogonality Penalty: Calculate the similarity between the candidate tool v’s embedding and the embeddings of
+all tools in the currently selected set Xj; use the maximum value as a penalty term (or conversely, define it as a
+diversity gain).
+Schema-based Mutual Information: Evaluate whether the output data structure of tool v can serve as input for a
+tool within Xj. Particularly when chaining tools via the Model Context Protocol (MCP), if the output of tool A
+aligns precisely with the input parameter specifications of tool B, this topological connectivity can yield a very
+high Ssyn score.
+3. α3: Runtime Penalty – Focusing on Feedback Metrics
+In production deployments, the Large Language Model’s (LLM) context window and response latency act as hard
+constraints.
+Physical Meaning: The ”friction cost” associated with system execution.
+Calculation Method:
+Token Consumption: The length of the tool schema description and the average number of tokens in the expected
+return result.
+Time Latency: The average latency of historical calls to the specific API or tool.
+Failure Rate: The probability—calculated from historical logs—that the tool triggers LLM hallucinations or exe-
+cution errors.
+Acts as a negative constraint to prevent the EA from evolving a bloated toolchain—containing a dozen or more
+redundant tools—that causes severe system timeouts or exceeds token limits.
+Within this three-dimensional framework, the Evolutionary Algorithm (EA) optimizes the vector α
+=
+[α1, α2, α3].
+4
+
+
+=== PAGE 5 ===
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+Under review as a conference paper at ICLR 2026
+The optimal distribution of α varies depending on the RAG/QA scenario. For example:
+For simple repeat-purchase queries, the EA might evolve a weight combination with a very high α3 (prioritizing
+low latency). For highly ambiguous, exploratory RAG/QA tasks (e.g., ”Help me plan a complete summer camping
+gear list”), the EA would evolve a weight combination with a very high α2 (encouraging high synergy and diversity
+among tools).
+Key Idea
+The outer layer employs an evolutionary algorithm (EA) to evolve the weight vector α, while the inner
+layer utilizes a nested greedy algorithm (NGA) combined with a surrogate heuristic function to rapidly construct
+tool subsets Finally, an LLM performs the actual fitness evaluation.
+Algorithm 2 Evolutionary Nested Greedy Algorithm (ENGA) for General Tool Selection
+Input: Candidate tool library V; Outer budget k; Inner budget b; User query q; Population size P; Max genera-
+tions G
+Output: Optimal tool subset S∗
+1: Initialize population P ←{α(1), α(2), . . . , α(P )}, where α = [α1, α2, α3]
+2: Global best fitness F ∗←−∞
+3: Global best tool subset S∗←∅
+4: for generation g = 1 ... G do
+5:
+for each individual α ∈P do
+6:
+// Phase 1: Fast NGA Decoding using Proxy Heuristic
+7:
+Sα ←∅
+8:
+for j = 1 ... k do
+9:
+Xj ←∅
+▷Initialize inner tool bundle
+10:
+for t = 1 ... b do
+11:
+// Calculate proxy marginal gain ˜∆
+12:
+v∗←arg maxv∈V\Xj
+
+α1 · Irel(v, q) + α2 · Ssyn(v, Xj) −α3 · Crun(v)
+
+13:
+Xj ←Xj ∪{v∗}
+14:
+end for
+15:
+Sα ←Sα ∪Xj
+16:
+end for
+17:
+// Phase 2: Fitness Evaluation via LLM Execution
+18:
+F(α) ←EvaluateFitness(Sα, q)
+▷Execute constructed toolset and get reward
+19:
+if F(α) > F ∗then
+20:
+F ∗←F(α)
+21:
+S∗←Sα
+22:
+end if
+23:
+end for
+24:
+// Phase 3: Evolutionary Operations (e.g., CMA-ES or Genetic Algorithm)
+25:
+Pparents ←Selection(P, F)
+▷Select elites based on fitness
+26:
+P ←CrossoverAndMutation(Pparents)
+▷Generate new weights For next generation
+27: end for
+return S∗
+Explanation
+1. Decoupling of Input Parameters: The algorithm abstracts away specific business logic; inputs
+consist solely of the tool library V, budget constraints (k, b), and a general query q.
+2. Phase 1 (Rapid Decoding): This step involves purely lightweight mathematical operations (such as vector dot
+products and similarity retrieval). Using the weights α from the current generation, a candidate set Sα containing
+k × b tools is rapidly constructed. This avoids invoking the Large Language Model (LLM) within the inner loop.
+3. Phase 3 (Real Evaluation): Perform a single ”real” ‘EvaluateFitness‘ assessment on the fully constructed
+toolset Sα (e.g., by feeding it to an LLM for execution and calculating metrics such as task success rate and
+composite reward), using the result as the fitness score for the current hyperparameters α.
+4. Phase 4 (Population Evolution): Drive the evolution of the weights α—through genetic algorithm operations
+such as selection, crossover, and mutation—toward configurations that yield toolsets with higher fitness.
+2.3
+DYNAMIC ENGA
+Objective
+˜∆(v|Xj, st) = α1 · Irel(v, q, st) + α2 · Ssyn(v, Xj) −α3 · Crun(v)
+(2)
+5
+
+
+=== PAGE 6 ===
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+Under review as a conference paper at ICLR 2026
+1. α1: State-Goal Alignment
+In a web environment, the relevance of a tool depends not only on the global goal q (e.g., ”book an early flight to
+New York tomorrow”) but also—and more critically—on the current page state st (e.g., currently on the ”passen-
+ger information” page).
+Physical Significance: The local utility of a candidate action v in advancing the global task q, given the current
+DOM state.
+Calculation Method: Extract the text and attributes of the UI element associated with candidate action v (e.g.,
+‘<button aria-label=”Search Flights”>‘).
+Use a lightweight encoder to compute the element’s embedding and calculate its similarity to the current sub-task
+intent (derived from the goal q and the current state st).
+Scenario Mapping: If the current state st is the homepage and the goal is to book a flight, the action v =
+type[Input Destination, ”JFK”] would receive a very high score, whereas v = click[FAQ Link] would receive a
+very low score.
+2. α2: Sequential Dependency & Coherence
+Actions in WebArena are governed by strict causal relationships—specifically, ”pre-conditions” and ”post-
+conditions.” For instance, one cannot click ”Search” before selecting a date, nor click ”Pay” without first agreeing
+to the terms and conditions.
+Physical Significance: The logical coherence between the candidate tool v and the sequence of actions already
+performed (Xj); specifically, whether the state resulting from Xj satisfies the pre-conditions required for v.
+Calculation Method: Schema-based Pre/Post-condition Matching: For example, the pre-condition for the action
+click[Search] typically requires that specific input fields have already been populated with values. By defining or
+learning a transition matrix, one can calculate the conditional transition probability P(v|Xj) of an action v given
+a historical trajectory Xj.
+DOM Focus Tracking: Assess whether the UI element acted upon by v maintains reasonable continuity—either
+in physical space or logical hierarchy—with the element just interacted with in Xj (e.g., filling in the ”First Name”
+field immediately after the ”Last Name” field).
+Scenario Mapping: If Xj includes click[Departure Date Input], then the subsequent candidate action v =
+click[Calendar Day 24] receives a significant synergy bonus.
+3. α3: Execution Risk & Irreversibility
+In web navigation, the costs associated with executing incorrect actions are asymmetric. The cost of scrolling
+down a page is minimal (as it can be reversed by scrolling up), whereas clicking ”Submit Order” or exiting the
+current booking flow carries a very high cost and could lead to the failure of the entire episode. Furthermore, web
+pages are often extremely lengthy, and processing complex DOM trees consumes a large number of tokens.
+Physical Significance: The execution cost of an action (token consumption) and the potential risk of causing a
+state collapse.
+Calculation Method: Token / Time Cost: Estimate the DOM complexity of the next state that the system must
+parse after executing action v.
+Irreversibility Penalty: Assign a penalty coefficient to high-risk actions. For instance, form submission, pay-
+ment, and cross-domain navigation are classified as high-risk actions, whereas hovering and scrolling are low-risk.
+For high-risk actions, the algorithm adopts a more conservative approach when evaluating their ∆value (i.e., they
+require strong positive support from α1 and α2 to be selected).
+Scenario Mapping: For v = click[Confirm Payment], the value of Crisk would be high. Unless Xj already
+perfectly encapsulates all necessary steps—such as seat selection and form filling—(resulting in an extremely
+high Sseq), the algorithm will not greedily select it during the early stages of exploration.
+6
+
+
+=== PAGE 7 ===
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+Under review as a conference paper at ICLR 2026
+Algorithm 3 Dynamic Interactive Nested Greedy Algorithm (DIN-GA) in WebArena
+Input: WebArena Environment E; Goal query q; Horizon budget T; Weight vector α = [α1, α2, α3]
+Output: Execution trajectory XT and task success status
+1: Initialize WebArena State s1 ←E.reset(q)
+2: Initialize historical action trajectory X0 ←∅
+3: for step t = 1 ... T do
+4:
+Parse current DOM/Accessibility tree from st to extract valid action candidates V(st)
+5:
+if st is terminal or V(st) = ∅then
+6:
+break
+▷Episode finished or task deadlocked
+7:
+end if
+8:
+// Phase 1: State-Conditioned Marginal Gain Evaluation
+9:
+for each candidate action v ∈V(st) do
+10:
+Compute State-Goal Alignment: Irel(v, q, st)
+11:
+Compute Sequential Dependency Score: Sseq(v, X<t)
+12:
+Compute Execution Risk & Cost: Crisk(v)
+13:
+// Calculate parameterized dynamic marginal gain ˜∆
+14:
+˜∆(v | X<t, st) ←α1 · Irel(v, q, st) + α2 · Sseq(v, X<t) −α3 · Crisk(v)
+15:
+end for
+16:
+// Phase 2: Action Selection
+17:
+v∗
+t ←arg maxv∈V(st) ˜∆(v | X<t, st)
+18:
+// Phase 3: Real Environment Interaction & State Transition
+19:
+Execute action v∗
+t in WebArena: (st+1, rt, done) ←E.step(v∗
+t )
+20:
+Update action trajectory: Xt ←X<t ◦(st, v∗
+t )
+21:
+if done then
+22:
+break
+▷Goal achieved or failure triggered
+23:
+end if
+24: end for
+return Trajectory Xt and final environment task status
+Explanation
+Line 4 (‘GetValidActions‘): In web navigation, the available tools are not static. At each step, the
+algorithm dynamically extracts interactive elements (such as text inputs, clickable buttons, and dropdown menus)
+by parsing the current page (DOM tree) to form the action pool V(st) for that step.
+Lines 9–13 (Calculation of ˜∆): Irel: Evaluates whether action v aligns with the global booking goal q given the
+current page state st (e.g., on a flight list page, selecting “sort by price” or “choose early flight” yields a higher
+alignment score).
+Sseq: Evaluates the coherence of action v with the historical trajectory X<t of the preceding t −1 steps (e.g.,
+entering an ID number immediately after entering a passenger’s name).
+Crisk: Applies a penalty to irreversible or high-cost actions—such as ”submit payment” or ”cancel order”—to
+discourage blind exploration.
+Line 18 (‘Environment Execution‘): Executes the selected action v∗
+t within the WebArena simulator and obtains
+the new state st+1 following the resulting webpage refresh, thereby establishing a dynamic closed-loop process.
+7
+
+
+=== PAGE 8 ===
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+Under review as a conference paper at ICLR 2026
+REFERENCES
+Shuyan Zhou, Frank F. Xu, Hao Zhu, Xuhui Zhou, Robert Lo, Abishek Sridhar, Xianyi Cheng, Tianyue Ou,
+Yonatan Bisk, Daniel Fried, Uri Alon, and Graham Neubig. Webarena: A realistic web environment for building
+autonomous agents, 2024. URL https://arxiv.org/abs/2307.13854.
+8
+
+

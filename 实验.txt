@@ -1,0 +1,14 @@
+成本：minimax api 199一个月
+          open code  5刀一个月 如果能用mcp跑实验的话
+          kimi 199 贵且少
+          deepseek即将涨价
+         中转站 1:0.15
+         glm   
+
+一个8b 模型 2 卡 A800 （85kv cache）
+数据集：toolbench tau bench bfcl
+涉及  
+省token 
+mcp server (tool bag)
+能不能就只   
+
