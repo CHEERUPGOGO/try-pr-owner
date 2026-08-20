@@ -44,22 +44,6 @@ t )
 20:
 Update action trajectory: Xt ←X<t ◦(st, v∗
 t )
-21:
-if done then
-22:
-break
-▷Goal achieved or failure triggered
-23:
-end if
-24: end for
-return Trajectory Xt and final environment task status
-Explanation
-Line 4 (‘GetValidActions‘): In web navigation, the available tools are not static. At each step, the
-algorithm dynamically extracts interactive elements (such as text inputs, clickable buttons, and dropdown menus)
-by parsing the current page (DOM tree) to form the action pool V(st) for that step.
-Lines 9–13 (Calculation of ˜∆): Irel: Evaluates whether action v aligns with the global booking goal q given the
-current page state st (e.g., on a flight list page, selecting “sort by price” or “choose early flight” yields a higher
-alignment score).
 Sseq: Evaluates the coherence of action v with the historical trajectory X<t of the preceding t −1 steps (e.g.,
 entering an ID number immediately after entering a passenger’s name).
 Crisk: Applies a penalty to irreversible or high-cost actions—such as ”submit payment” or ”cancel order”—to

@@ -77,16 +77,8 @@ products and similarity retrieval). Using the weights α from the current genera
 k × b tools is rapidly constructed. This avoids invoking the Large Language Model (LLM) within the inner loop.
 3. Phase 3 (Real Evaluation): Perform a single ”real” ‘EvaluateFitness‘ assessment on the fully constructed
 toolset Sα (e.g., by feeding it to an LLM for execution and calculating metrics such as task success rate and
-composite reward), using the result as the fitness score for the current hyperparameters α.
-4. Phase 4 (Population Evolution): Drive the evolution of the weights α—through genetic algorithm operations
-such as selection, crossover, and mutation—toward configurations that yield toolsets with higher fitness.
-2.3
-DYNAMIC ENGA
-Objective
-˜∆(v|Xj, st) = α1 · Irel(v, q, st) + α2 · Ssyn(v, Xj) −α3 · Crun(v)
-(2)
-5
 
+sush
 
 --------------------
 
