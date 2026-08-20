@@ -17,16 +17,7 @@ Input: Ground set V ; budget b; solution-set size k
 Output: Solution set S
 1: S ←∅
 2: for j = 1 ... k do
-3:
-Xj ←∅
-4:
-for t = 1 ... b do
-5:
-v∗←arg maxv∈V \Xj ∆pS(v | Xj)
-6:
-Xj ←Xj ∪{v∗}
-7:
-end for
+
 8:
 S ←S ∪Xj
 9: end forreturn S
